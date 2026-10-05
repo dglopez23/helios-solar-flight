@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-`npm run build` prepara los recursos en `dist/assets/`. La aplicación completa se sirve desde `dist/`, sin servidor de datos ni peticiones externas durante el juego. Los recursos originales se guardan en paquetes ZIP de menos de 25 MB y se extraen y verifican automáticamente con SHA-256. Node.js 18 o posterior. `npm test` comprueba las físicas y los datos.
+`npm run build` prepara los recursos en `dist/assets/`. La aplicación completa se sirve desde `dist/`, sin servidor de datos ni peticiones externas durante el juego. Los recursos se verifican con SHA-256. Si los paquetes ZIP aún no están en la copia del repositorio, el preparador descarga los mapas, modelos y datos originales de la edición pública de DGLopez. La primera preparación necesita conexión y aproximadamente 171 MB; las siguientes reutilizan los recursos locales verificados. Node.js 18 o posterior. `npm test` comprueba las físicas y los datos.
 
 ## Datos y límites
 

@@ -8,6 +8,23 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const manifest=JSON.parse(readFileSync(resolve(root,'assets-manifest.json'),'utf8'));
 const hash=data=>createHash('sha256').update(data).digest('hex');
 let files=0;
+if(!manifest.bundles.every(bundle=>existsSync(resolve(root,bundle.file)))){
+ const origin='https://juegos-dglopez.dglopez.chatgpt.site/helios/';
+ for(const [name,expected] of Object.entries(manifest.files)){
+  if(!(name.startsWith('dist/assets/')||name.startsWith('data-sources/'))||name.includes('..')||name.includes('\\'))throw Error('Ruta inválida: '+name);
+  const target=resolve(root,name);
+  if(existsSync(target)&&hash(readFileSync(target))===expected){files++;continue;}
+  const relative=name.startsWith('dist/')?name.slice(5):name;
+  const response=await fetch(new URL(relative,origin),{signal:AbortSignal.timeout(120000)});
+  if(!response.ok)throw Error('No se pudo descargar '+name+' ('+response.status+')');
+  const data=Buffer.from(await response.arrayBuffer());
+  if(hash(data)!==expected)throw Error('Recurso dañado: '+name);
+  mkdirSync(dirname(target),{recursive:true});writeFileSync(target,data);files++;
+  console.log('Preparado: '+name);
+ }
+ console.log(`HELIOS: ${files} recursos verificados y preparados.`);
+ process.exit(0);
+}
 for(const bundle of manifest.bundles){
  const zip=readFileSync(resolve(root,bundle.file));
  if(hash(zip)!==bundle.sha256)throw Error('Paquete dañado: '+bundle.file);
