@@ -3,39 +3,43 @@
   "bundles": [
     {
       "file": "assets-01.zip",
-      "sha256": "2cfacc7a25fd455fcac02e8e6dc1e44d3c68497ba227cab71578bb5009aba21a"
+      "sha256": "2dc10c976baac2f75700813a594eae4a4077c88aebeca6b64627562bc99e3484"
     },
     {
       "file": "assets-02.zip",
-      "sha256": "2519c437c3f2c9c64477c3223b797f70511e81d830d5ee4bb531bf7032a93376"
+      "sha256": "a198b25a9e8a22ed343a2c51dbb31df8ca809309406d0a890f61ff3c72bd87e9"
     },
     {
       "file": "assets-03.zip",
-      "sha256": "40113d623ad7df91adfb55fd3676398c75d04aa773d6af05700cd3cf18662eac"
+      "sha256": "c09010e216b2f1e5de8cff144c7e15e69fd49b42254bd3cb72efb6211be7f5d3"
     },
     {
       "file": "assets-04.zip",
-      "sha256": "14426bdb8c36bcd42e40483edbabf16fbfba6f939d75159c093ae0b12ef7acd7"
+      "sha256": "c39001df2efda843ce0a89a2cf6255040a2c1b5551ebf538028fad05cb39a5ee"
     },
     {
       "file": "assets-05.zip",
-      "sha256": "37ce5c7f6ce84b115a672d072e8f140246d43cb4c3862a7ee914384bd1713637"
+      "sha256": "be50d2e3cd8143ab6262b156ed98bb98f3d96545779c4dcf56849c090db748ba"
     },
     {
       "file": "assets-06.zip",
-      "sha256": "b14ca4b520efa9fb731074fc9e60a35322ff6a76e02a56d02ccd73d3d734d6eb"
+      "sha256": "4895b8bf4fb4293291c1ddc9d760a1c4f61b289c9c2d3d2a9d618d0426e40727"
     },
     {
       "file": "assets-07.zip",
-      "sha256": "0cd98359ad4eb698bf33075168bd0be205de60bd36ed8ff260ecb84bd8abd2d8"
+      "sha256": "52cf531b19152ce241de2144eeaac17fd22ab43083b149974c5669451589751c"
     },
     {
       "file": "assets-08.zip",
-      "sha256": "bebe083941b1143e931a0522d5826a33217d9f2e059e1ef8aafd1cced81be272"
+      "sha256": "f110a0dbc336c9dc3a65a117353a860771572a692b5af35daab7f2ed266f0860"
     },
     {
-      "file": "source-data.zip",
-      "sha256": "2f108822d29566ea005ab9c1ec06c87b469368285b7af872073ca753ba903eb1"
+      "file": "assets-09.zip",
+      "sha256": "0e84036bde71b2039a288da5895320eceffbda3f9b5a581fbc76a6b1877893ad"
+    },
+    {
+      "file": "assets-10.zip",
+      "sha256": "87cef2e2f19bb03102b756a35e3e82c07064bae9fcdb4e61b3e308efdc8a3ad9"
     }
   ],
   "files": {
@@ -157,5 +161,10 @@
     "data-sources/uranus-source.txt": "6b0070c5c8d37f6dc990ac368971bcf5453a4c3470629ef2bae15aa51242d933",
     "data-sources/venus-source.txt": "0af1c91554fb0287576d005d0c9e84646cf1addb5d691cb8d04cba60e7d0eb6a",
     "data-sources/vesta-source.txt": "adfbb7f648790ff613363c5718c40f6bfa118527bfe9444f40d6e0b1f23e3b55"
+  },
+  "sourceDataArchive": {
+    "file": "source-data.json.br",
+    "sha256": "7678ddbf55393b3fe30b64fba1b110cab8efe4b6dbe1168f381021612221e1e1",
+    "format": "brotli-json"
   }
 }
