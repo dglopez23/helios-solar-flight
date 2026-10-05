@@ -1,0 +1,5 @@
+node_modules/
+dist/assets/
+.sites-runtime/
+.env*
+data-sources/
