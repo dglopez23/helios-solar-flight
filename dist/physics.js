@@ -1,4 +1,4 @@
-export const C=299792.458, MAX_SPEED=.2*C, AU=149597870.7, JD_START=2461317.5, DAY=86400;
+export const C=299792.458, MAX_SPEED=C, AU=149597870.7, JD_START=2461317.5, DAY=86400;
 export const bodies=[
 {id:'sun',name:'Sol',kind:'ESTRELLA · G2V',r:695700,rotation:25.38,tilt:7.25,color:'#fffaf2',map:'sun'},
 {id:'mercury',name:'Mercurio',kind:'PLANETA ROCOSO',r:2439.4,rotation:58.6462,tilt:.034,map:'mercury'},

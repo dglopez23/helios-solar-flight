@@ -14,7 +14,7 @@ npm run dev
 ## Datos y límites
 
 
-Solar exploration game. Browser-only application with Three.js WebGL rendering and an automatic CPU ray-tracing compatibility path. Launch from Earth, maximum solar-frame cruise speed 0.2c (59958.4916 km/s), logarithmic throttle, swept-body surface impacts, time compression, and optional heading-only assistance without braking.
+Solar exploration game. Browser-only application with Three.js WebGL rendering and an automatic CPU ray-tracing compatibility path. Launch from Earth, maximum solar-frame cruise speed c (299792.458 km/s), logarithmic throttle, swept-body surface impacts, time compression, and optional heading-only assistance without braking.
 
 The scene uses kilometres in double precision, subtracts the observer before GPU upload, and renders at 1000 km per scene unit. Planet radii are volumetric mean radii: reference spheres plus integrated measured terrain, not detailed ellipsoids. JPL Horizons geometric barycentric positions and velocities are interpolated by cubic Hermite between hourly samples. The epoch window is 2026-10-04 to 2026-11-05 TDB. Displayed UTC is approximated as TDB minus 69.184 seconds. Raw retrievals are retained in data-sources.
 
@@ -29,7 +29,7 @@ Sources:
 
 Production serves dist after preparing assets.
 
-Validation: `node verify.mjs` exercises heading assistance without braking, surface collision at 0.2c and 1000×, and Sun visibility at 40/100 AU. Syntax checks, 29 ephemeris series, exact sample reproduction, finite inputs, numerical speed bound, swept sphere collision cases. Browser interaction checked in the compatibility renderer because the test browser's WebGL is disabled. WebGL rendering cannot be visually verified in that browser. WebMCP is feature-detected; unavailable in the test browser.
+Validation: `node verify.mjs` exercises heading assistance without braking, surface collision at c and 1000×, and Sun visibility at 40/100 AU. Syntax checks, 29 ephemeris series, exact sample reproduction, finite inputs, numerical speed bound, swept sphere collision cases. Browser interaction checked in the compatibility renderer because the test browser's WebGL is disabled. WebGL rendering cannot be visually verified in that browser. WebMCP is feature-detected; unavailable in the test browser.
 
 Solid-body collisions occur at their measured radial terrain surface where integrated, otherwise at their reference radius, freeze at contact, and show a ship destruction / restore flow. Gas giants destroy the ship at the reference cloud radius by extreme pressure; this is a game approximation, not a solid surface. Local atmosphere colors/scales are visual approximations. Artificial rock/cloud grain has been removed. Low 2K maps load at startup; 4K–16K maps stream for the nearest body with GPU texture eviction. Geometric local patches sample measured elevation near contact; the software ray tracer and collision solver sample the same data. Additional maps and credits: dist/assets/sources.json.
 
@@ -46,3 +46,5 @@ Measured terrain update: Earth NOAA ETOPO 2022 (sea level clamps ocean bathymetr
 New JPL hourly ephemerides cover Ida, Gaspra, Hygiea, Psyche, Eunomia, Iris, Hebe and Halley. Newly added small-body masses and pole orientations are approximate; source Horizons headers are retained. Halley is far from perihelion in the October 2026 window and has no fabricated active tail. Solar prominence geometry reconstructs several observed-scale magnetic arcs; this is illustrative plasma geometry, not a solid elevation map or a live solar state.
 
 Mission illumination now uses a solar directional light and faint ambient fill, with the software path receiving the same solar direction. Star exposure samples the illuminated field of view and nearby sunlit ground. An original Web Audio ambient score has a separate MÚSICA toggle and begins with launch. Tests cover terrain ray intersection, measured-height impacts, daylight-ground star suppression and every new JPL series.
+
+Cabin update: local quaternion yaw/pitch for both mouse and arrows, independent Q/E roll, shortest-arc heading assistance, and an 8-second fictional assisted ascent to 600 km. V opens ship/throttle, N destinations, B systems; Tab hides the HUD when the flight view has focus. Drawers are closed initially and mutually exclusive. Throttle reaches c as a game setting, without relativistic dynamics. Small-body normals use the actual local radius and a derivative scale matched to the native shape sampling; an airless diffuse reflectance approximation and consistent CPU color conversion improve Halley/Ida/Gaspra without inventing craters or textures.
