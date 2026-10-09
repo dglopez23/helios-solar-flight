@@ -1,5 +1,6 @@
+import {diskEmission,shiftSky,jetEmission,emissionGLSL} from './accretion.js';
 import * as THREE from './assets/three.module.js';
-import {RS,lapse,traceRay,aberrateToStatic} from './black-hole-physics.js';
+import {RS,lapse,traceRay} from './black-hole-physics.js';
 
 const vertex='varying vec2 uvScreen;void main(){uvScreen=uv;gl_Position=vec4(position.xy,0.,1.);}';
 const fragment=`
@@ -7,9 +8,9 @@ precision highp float;
 varying vec2 uvScreen;
 uniform sampler2D starsMap,milkyMap;
 uniform mat3 attitude;
-uniform vec3 observer,beta;
+uniform vec3 observer;
 uniform float aspect,tanFov,clock,exposure;
-uniform bool disk,guides;
+uniform bool disk,guides,jets;
 const float PI=3.14159265359;
 float accel(float u){return -u+1.5*u*u;}
 vec3 sky(vec3 d){
@@ -19,21 +20,13 @@ vec3 sky(vec3 d){
  vec2 mw=vec2(.5-atan(eqY,d.x)/(2.*PI),.5+asin(clamp(eqZ,-1.,1.))/PI);
  return pow(col,vec3(2.2))+pow(texture2D(milkyMap,mw).rgb*.22,vec3(2.2));
 }
-vec3 thermal(float temperature){
- float t=temperature/100.;
- float r=t<=66.?255.:329.6987*pow(max(1.,t-60.),-.1332048);
- float g=t<=66.?99.4708*log(max(1.,t))-161.1196:288.1222*pow(max(1.,t-60.),-.0755148);
- float b=t>=66.?255.:t<=19.?0.:138.5177*log(t-10.)-305.0448;
- return pow(clamp(vec3(r,g,b)/255.,0.,1.),vec3(2.2));
-}
+${emissionGLSL}
 void main(){
  vec2 p=uvScreen*2.-1.;vec3 ray=normalize(attitude*vec3(p.x*aspect*tanFov,p.y*tanFov,-1.));
- float b2=dot(beta,beta),gamma=1./sqrt(max(.001,1.-b2));
- if(b2>.000001){float dotB=dot(ray,beta);ray=(ray+(((gamma-1.)*dotB/b2)-gamma)*beta)/(gamma*(1.-dotB));}
  float r=length(observer),f=1.-1./r,cosA=clamp(dot(ray,observer/r),-1.,1.),sinA=sqrt(max(0.,1.-cosA*cosA));
  vec3 er=observer/r,et=sinA>.000001?normalize(ray-er*cosA):vec3(0.,1.,0.);
- float observerShift=gamma*(1.+dot(beta,ray))/sqrt(f);
- vec3 color=vec3(0.);bool finished=false;bool diskHit=false;float guide=0.;
+ float observerShift=1./sqrt(f);
+ vec3 color=vec3(0.),jetColor=vec3(0.);bool finished=false;bool diskHit=false;float guide=0.;
  if(sinA<.00001){if(cosA>0.)color=sky(er);finished=true;}
  float impact=r*sinA/sqrt(f),u=1./r,w=-cosA/max(.00001,impact),phi=0.;
  for(int i=0;i<640;i++){
@@ -42,6 +35,7 @@ void main(){
   float a1=accel(u),k2u=w+h*a1*.5,k2w=accel(u+h*w*.5),k3u=w+h*k2w*.5,k3w=accel(u+h*k2u*.5),k4u=w+h*k3w,k4w=accel(u+h*k3u);
   u+=h*(w+2.*k2u+2.*k3u+k4u)/6.;w+=h*(a1+2.*k2w+2.*k3w+k4w)/6.;phi+=h;
   vec3 a=er*cos(oldPhi)+et*sin(oldPhi),b=er*cos(phi)+et*sin(phi);
+  if(jets&&disk&&oldU>0.&&u>0.){vec3 pa=a/oldU,pb=b/u;jetColor+=jetEmission((pa+pb)*.5,clock,length(pb-pa),observerShift);}
   if(guides){
    if((oldU-1./1.5)*(u-1./1.5)<0.)guide=max(guide,.2);
    if((oldU-1./3.)*(u-1./3.)<0.)guide=max(guide,.07);
@@ -54,10 +48,7 @@ void main(){
     vec3 backwards=normalize(-hitW/sqrt(ff)*radial+hitU*tangent);
     vec3 orbit=normalize(vec3(-radial.z,0.,radial.x));float speed=sqrt(1./(2.*(rr-1.))),gasGamma=1./sqrt(1.-speed*speed);
     float shift=sqrt(ff)*observerShift/(gasGamma*(1.+speed*dot(orbit,backwards)));
-    float temperature=12000.*pow(3./rr,.75);
-    float edge=smoothstep(3.,3.4,rr)*(1.-smoothstep(18.,22.,rr));
-    float pattern=1.+.12*sin(atan(radial.z,radial.x)*9.+rr*4.-clock*.018/pow(rr,1.5));
-    color=thermal(temperature*shift)*pow(3./rr,2.)*pow(clamp(shift,.05,12.),3.)*edge*pattern*8.;finished=true;diskHit=true;
+    color=diskEmission(rr,atan(radial.z,radial.x),clock,shift);finished=true;diskHit=true;
    }
   }
   if(!finished&&u>=1.){finished=true;color=vec3(0.);}
@@ -66,7 +57,8 @@ void main(){
   }
  }
  // Stellar spectral response is approximate; tracing and the frequency factor are physical.
- if(!diskHit){float g=clamp(observerShift,.05,12.);color*=pow(g,3.)*mix(vec3(1.),vec3(.55,.75,1.),clamp(log(g)*.4,0.,1.));}
+ if(!diskHit)color=shiftSky(color,observerShift);
+ color+=jetColor;
  color+=guide*vec3(.12,.65,.8);
  color=vec3(1.)-exp(-color*exposure);
  gl_FragColor=vec4(color,1.);
@@ -77,7 +69,7 @@ export class BlackHoleRenderer{
  constructor(renderer,canvas){
   this.renderer=renderer;this.canvas=canvas;this.software=!!renderer.ctx;this.last=0;this.quality='auto';this.adaptiveWidth=640;this.frameMean=25;this.qualityTime=0;
   if(!this.software){
-   this.uniforms={starsMap:{value:null},milkyMap:{value:null},attitude:{value:new THREE.Matrix3()},observer:{value:new THREE.Vector3()},beta:{value:new THREE.Vector3()},aspect:{value:1},tanFov:{value:1},clock:{value:0},exposure:{value:1},disk:{value:true},guides:{value:false}};
+   this.uniforms={starsMap:{value:null},milkyMap:{value:null},attitude:{value:new THREE.Matrix3()},observer:{value:new THREE.Vector3()},aspect:{value:1},tanFov:{value:1},clock:{value:0},exposure:{value:1},disk:{value:true},jets:{value:false},guides:{value:false}};
    this.scene=new THREE.Scene();this.camera=new THREE.Camera();this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({uniforms:this.uniforms,vertexShader:vertex,fragmentShader:fragment,depthTest:false,depthWrite:false})));
    this.target=new THREE.WebGLRenderTarget(640,360,{depthBuffer:false});this.output=new THREE.Scene();
    this.output.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({uniforms:{image:{value:this.target.texture}},vertexShader:vertex,fragmentShader:'varying vec2 uvScreen;uniform sampler2D image;void main(){gl_FragColor=texture2D(image,uvScreen);\n#include <colorspace_fragment>\n}',depthTest:false,depthWrite:false})));
@@ -101,15 +93,15 @@ export class BlackHoleRenderer{
  }
  render(camera,position,velocity,settings){
   if(!this.catalog)return;
-  const beta=velocity.clone().divideScalar(299792.458),r=position.length()/RS;
+  const beta=new THREE.Vector3(),r=position.length()/RS;
   const exposure=settings.exposure/Math.max(1,Math.pow(1/lapse(r),1.1));
   if(!this.software){
    const now=performance.now();if(this.renderTime&&now-this.renderTime<250)this.frameMean=this.frameMean*.96+(now-this.renderTime)*.04;this.renderTime=now;
    if(now-this.qualityTime>2000){if(this.frameMean>45)this.adaptiveWidth=Math.max(320,this.adaptiveWidth-128);else if(this.frameMean<24)this.adaptiveWidth=Math.min(960,this.adaptiveWidth+128);this.qualityTime=now;}
    const width=Math.min(this.canvas.width,this.quality==='high'?1280:this.adaptiveWidth),height=Math.round(width*this.canvas.height/this.canvas.width);
    if(this.target.width!==width||this.target.height!==height)this.target.setSize(width,height);
-   Object.assign(this.uniforms.aspect,{value:camera.aspect});this.uniforms.tanFov.value=Math.tan(camera.fov*Math.PI/360);this.uniforms.observer.value.copy(position).divideScalar(RS);this.uniforms.beta.value.copy(beta);this.uniforms.attitude.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(camera.quaternion));
-   this.uniforms.clock.value=settings.coordinate;this.uniforms.exposure.value=exposure;this.uniforms.disk.value=settings.disk;this.uniforms.guides.value=settings.guides;
+   Object.assign(this.uniforms.aspect,{value:camera.aspect});this.uniforms.tanFov.value=Math.tan(camera.fov*Math.PI/360);this.uniforms.observer.value.copy(position).divideScalar(RS);this.uniforms.attitude.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(camera.quaternion));
+   this.uniforms.clock.value=settings.coordinate*(settings.flowRate??30);this.uniforms.jets.value=!!settings.jets;this.uniforms.exposure.value=exposure;this.uniforms.disk.value=settings.disk;this.uniforms.guides.value=settings.guides;
    this.renderer.setRenderTarget(this.target);this.renderer.render(this.scene,this.camera);this.renderer.setRenderTarget(null);this.renderer.render(this.output,this.camera);
   }else this.renderCPU(camera,position,beta,settings,exposure);
  }
@@ -119,20 +111,20 @@ export class BlackHoleRenderer{
   if(this.low.width!==width||this.low.height!==height){this.low.width=width;this.low.height=height;}
   const image=this.ctx.createImageData(width,height),er=position.clone().normalize(),r=position.length()/RS,tan=Math.tan(camera.fov*Math.PI/360),betaArray=beta.toArray();
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-   const local=new THREE.Vector3(((x+.5)/width*2-1)*tan*camera.aspect,(1-(y+.5)/height*2)*tan,-1).normalize().applyQuaternion(camera.quaternion),ray=new THREE.Vector3().fromArray(aberrateToStatic(local.toArray(),betaArray)),cosA=Math.max(-1,Math.min(1,ray.dot(er))),et=ray.clone().addScaledVector(er,-cosA).normalize();
-   let color=null,guide=0;
-   const result=traceRay(r,cosA,settings.disk||settings.guides?(p0,p1,u0,u1,w0,w1)=>{
+   const local=new THREE.Vector3(((x+.5)/width*2-1)*tan*camera.aspect,(1-(y+.5)/height*2)*tan,-1).normalize().applyQuaternion(camera.quaternion),ray=local,cosA=Math.max(-1,Math.min(1,ray.dot(er))),et=ray.clone().addScaledVector(er,-cosA).normalize();
+   let color=null,guide=0,jetColor=[0,0,0];
+   const result=traceRay(r,cosA,settings.disk||settings.guides||settings.jets?(p0,p1,u0,u1,w0,w1)=>{
+    if(settings.jets&&settings.disk&&u0>0&&u1>0){const pa=er.clone().multiplyScalar(Math.cos(p0)).addScaledVector(et,Math.sin(p0)).divideScalar(u0),pb=er.clone().multiplyScalar(Math.cos(p1)).addScaledVector(et,Math.sin(p1)).divideScalar(u1),mid=pa.clone().add(pb).multiplyScalar(.5),j=jetEmission(mid.x,mid.y,mid.z,settings.coordinate*(settings.flowRate??30),pa.distanceTo(pb),1/lapse(r));jetColor=jetColor.map((v,i)=>v+j[i]);}
     if(settings.guides){if((u0-1/1.5)*(u1-1/1.5)<0)guide=Math.max(guide,.2);if((u0-1/3)*(u1-1/3)<0)guide=Math.max(guide,.07);}
     if(!settings.disk)return false;
     const a=er.y*Math.cos(p0)+et.y*Math.sin(p0),b=er.y*Math.cos(p1)+et.y*Math.sin(p1);
     if(a*b>=0)return false;
     const fraction=Math.abs(a)/(Math.abs(a)+Math.abs(b)),angle=p0+(p1-p0)*fraction,hitU=u0+(u1-u0)*fraction,rr=1/hitU;if(rr<3||rr>22)return false;
-    const radial=er.clone().multiplyScalar(Math.cos(angle)).addScaledVector(et,Math.sin(angle)),tangent=er.clone().multiplyScalar(-Math.sin(angle)).addScaledVector(et,Math.cos(angle)),hitW=w0+(w1-w0)*fraction,backwards=radial.clone().multiplyScalar(-hitW/lapse(rr)).addScaledVector(tangent,hitU).normalize(),orbit=new THREE.Vector3(-radial.z,0,radial.x).normalize(),gasSpeed=Math.sqrt(1/(2*(rr-1))),gamma=1/Math.sqrt(1-beta.lengthSq()),shift=lapse(rr)/lapse(r)*gamma*(1+beta.dot(ray))/(1/Math.sqrt(1-gasSpeed*gasSpeed)*(1+gasSpeed*orbit.dot(backwards)));
-    const t=12000*(3/rr)**.75*shift/100,R=t<=66?255:329.6987*Math.max(1,t-60)**(-.1332048),G=t<=66?99.4708*Math.log(Math.max(1,t))-161.1196:288.1222*Math.max(1,t-60)**(-.0755148),B=t>=66?255:t<=19?0:138.5177*Math.log(t-10)-305.0448;
-    const edge=Math.max(0,Math.min(1,(rr-3)/.4))*Math.max(0,Math.min(1,(22-rr)/4)),power=(3/rr)**2*Math.min(12,Math.max(.05,shift))**3*edge*8;
-    color=[R,G,B].map(v=>(Math.max(0,Math.min(255,v))/255)**2.2*power);return true;
+    const radial=er.clone().multiplyScalar(Math.cos(angle)).addScaledVector(et,Math.sin(angle)),tangent=er.clone().multiplyScalar(-Math.sin(angle)).addScaledVector(et,Math.cos(angle)),hitW=w0+(w1-w0)*fraction,backwards=radial.clone().multiplyScalar(-hitW/lapse(rr)).addScaledVector(tangent,hitU).normalize(),orbit=new THREE.Vector3(-radial.z,0,radial.x).normalize(),gasSpeed=Math.sqrt(1/(2*(rr-1))),shift=lapse(rr)/lapse(r)/(1/Math.sqrt(1-gasSpeed*gasSpeed)*(1+gasSpeed*orbit.dot(backwards)));
+    color=diskEmission(rr,Math.atan2(radial.z,radial.x),settings.coordinate*(settings.flowRate??30),shift);return true;
    }:null);
-   if(!color){if(result.captured)color=[0,0,0];else{const d=result.radial?er:er.clone().multiplyScalar(Math.cos(result.phi)).addScaledVector(et,Math.sin(result.phi));color=this.sampleSky(d);const g=Math.min(12,Math.max(.05,1/lapse(r)/Math.sqrt(1-beta.lengthSq())*(1+beta.dot(ray)))),tint=Math.max(0,Math.min(1,Math.log(g)*.4));color=color.map((v,i)=>v*g**3*(1-tint+tint*[.55,.75,1][i]));}}
+   if(!color){if(result.captured)color=[0,0,0];else{const d=result.radial?er:er.clone().multiplyScalar(Math.cos(result.phi)).addScaledVector(et,Math.sin(result.phi));color=this.sampleSky(d);color=shiftSky(color,1/lapse(r));}}
+   color=color.map((v,i)=>v+jetColor[i]);
    if(guide)color=color.map((v,i)=>v+guide*[.12,.65,.8][i]);
    const k=(y*width+x)*4;for(let j=0;j<3;j++)image.data[k+j]=255*Math.pow(1-Math.exp(-color[j]*exposure),1/2.2);image.data[k+3]=255;
   }

@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prepare:assets": "node scripts/prepare-assets.mjs",
+    "prepare:assets": "node scripts/prepare-assets.mjs && node scripts/prepare-solar-assets.mjs",
     "predev": "npm run prepare:assets",
     "dev": "vite dist --host 0.0.0.0",
     "build": "npm run prepare:assets",
     "pretest": "npm run prepare:assets",
-    "test": "node verify.mjs && node verify-black-hole.mjs"
+    "test": "node verify.mjs && node verify-black-hole.mjs && node verify-appearance.mjs"
   },
   "devDependencies": {
     "vite": "6.1.0"

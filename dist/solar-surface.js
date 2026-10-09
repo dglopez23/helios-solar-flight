@@ -1,0 +1,24 @@
+import * as THREE from './assets/three.module.js';
+import {noise,smooth,emissionGLSL} from './accretion.js';
+export const regions=[[-.12,.14,75000,50000,.2],[.42,-.27,39000,28000,-.6],[.93,.32,57000,35000,.8],[1.28,-.25,42000,35000,-.3],[1.85,.1,92000,58000,.5],[2.3,-.32,32000,23000,-.8],[2.75,.31,105000,65000,.4],[3.2,-.13,51000,32000,.9],[3.72,.23,70000,44000,-.6],[4.15,-.3,27000,21000,.1],[4.6,-.12,58000,42000,.6],[5.2,.27,84000,52000,-.4],[5.75,-.25,46000,30000,.7]];
+export function regionFrame(lon,lat,azimuth=0){const n=new THREE.Vector3(-Math.cos(lon)*Math.cos(lat),Math.sin(lat),Math.sin(lon)*Math.cos(lat)),east=new THREE.Vector3(Math.sin(lon),0,Math.cos(lon)),north=new THREE.Vector3().crossVectors(n,east),u=east.multiplyScalar(Math.cos(azimuth)).addScaledVector(north,Math.sin(azimuth));return {n,u};}
+export function makeSolarTextures(){
+ const c=document.createElement('canvas');c.width=c.height=768;const ctx=c.getContext('2d'),img=ctx.createImageData(c.width,c.height),cells=24;
+ const rand=(x,y)=>noise(((x%cells)+cells)%cells*3.71,((y%cells)+cells)%cells*4.19);
+ for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){let px=x/c.width*cells,py=y/c.height*cells;px+=.32*Math.sin(py*2*Math.PI/6)+.18*Math.cos(py*2*Math.PI/3);py+=.23*Math.sin(px*2*Math.PI/8);const ix=Math.floor(px),iy=Math.floor(py);let d=9,e=9,seed=0;for(let b=-1;b<=1;b++)for(let a=-1;a<=1;a++){const cx=ix+a,cy=iy+b,dx=cx+.12+.76*rand(cx,cy)-px,dy=cy+.12+.76*rand(cx+7,cy+13)-py,v=dx*dx+dy*dy;if(v<d){e=d;d=v;seed=rand(cx+11,cy+5);}else if(v<e)e=v;}const lane=smooth(.012,.22,Math.sqrt(e)-Math.sqrt(d)),fine=noise(px*21,py*21),v=255*(.055+lane*(.48+.36*seed))*(.88+.12*fine),i=(y*c.width+x)*4;img.data[i]=img.data[i+1]=img.data[i+2]=v;img.data[i+3]=255;}ctx.putImageData(img,0,0);
+ const spots=document.createElement('canvas');spots.width=4096;spots.height=2048;const s=spots.getContext('2d');s.fillStyle='#fff';s.fillRect(0,0,spots.width,spots.height);
+ for(const [lon,lat,h,width,azimuth] of regions){const {n,u}=regionFrame(lon,lat,azimuth);for(const sign of [-1,1]){const angle=sign*width/695700,p=n.clone().multiplyScalar(Math.cos(angle)).addScaledVector(u,Math.sin(angle)),uu=(Math.atan2(p.z,-p.x)/(2*Math.PI)+1)%1,v=Math.acos(p.y)/Math.PI;for(const wrap of [-1,0,1]){const x=(uu+wrap)*spots.width,y=v*spots.height,rx=9+h/10000,ry=rx*.68;s.save();s.translate(x,y);s.rotate(azimuth);s.scale(1,ry/rx);const g=s.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,'#111');g.addColorStop(.32,'#171717');g.addColorStop(.5,'#686868');g.addColorStop(.8,'#b8b8b8');g.addColorStop(1,'#fff');s.fillStyle=g;s.fillRect(-rx,-rx,rx*2,rx*2);for(let j=0;j<90;j++){const a=j*2*Math.PI/90,r=rx*(.78+.19*Math.sin(j*13.1));s.strokeStyle='rgba(25,25,25,.17)';s.lineWidth=.5;s.beginPath();s.moveTo(Math.cos(a)*rx*.4,Math.sin(a)*rx*.4);s.lineTo(Math.cos(a+.05)*r,Math.sin(a+.05)*r);s.stroke();}s.restore();}}}
+ const texture=canvas=>{const t=new THREE.CanvasTexture(canvas);t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;t.minFilter=THREE.LinearMipmapLinearFilter;return t;};return {granules:texture(c),spots:texture(spots)};
+}
+export function solarColor(grain,spot,mu,detail,euv,observed,n){const limb=.38+.62*Math.max(0,mu)**.55,photo=(.78*(1-detail)+(.035+grain**1.35*1.4)*detail)*spot*limb;let rgb=[photo,photo*.91,photo*.74];if(euv){const activity=.6*noise(n[0]*18+n[2]*10,n[1]*18)+.27*noise(n[0]*53,n[1]*53+n[2]*19)+.13*noise(n[0]*127,n[1]*127),synthetic=[activity**1.5,activity**2.2*.58,activity**3*.1],blend=observed?smooth(.05,.35,n[2]):0;rgb=synthetic.map((x,i)=>(x*(1-blend)+(observed?.[i]||0)*1.25*blend)*(.72+.5*grain*detail)+(1-spot)*[.28,.15,.03][i]);}return rgb;}
+export const solarFragment=`#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D tex,granules,spots,euvMap;uniform float filtered,euv,euvReady,solarTime;varying vec2 vUV;varying vec3 vN,vP,vLocal;
+${emissionGLSL}
+void main(){
+#include <logdepthbuf_fragment>
+ vec3 n=normalize(vLocal);float mu=max(.01,dot(normalize(vN),normalize(-vP))),kmPixel=length(fwidth(n))*695700.,detail=1.-smoothstep(600.,2000.,kmPixel);vec2 uv=vUV*vec2(128.,64.)+vec2(.173,.381)+vec2(.005*sin(solarTime*.003+vUV.y*83.),.004*cos(solarTime*.002+vUV.x*97.));float grain=dot(texture2D(granules,uv).rgb,vec3(.2126,.7152,.0722)),spot=texture2D(spots,vUV).r,photo=(.78*(1.-detail)+(.035+pow(grain,1.35)*1.4)*detail)*spot*(.38+.62*pow(mu,.55));vec3 rgb=vec3(1.,.91,.74)*photo;
+ if(euv>.5){float activity=.6*noise(vec2(n.x*18.+n.z*10.,n.y*18.))+.27*noise(vec2(n.x*53.,n.y*53.+n.z*19.))+.13*noise(n.xy*127.);vec3 synthetic=vec3(pow(activity,1.5),pow(activity,2.2)*.58,pow(activity,3.)*.1),observed=texture2D(euvMap,.5+n.xy*.417).rgb;rgb=mix(synthetic,observed*1.25,euvReady*smoothstep(.05,.35,n.z))*(.72+.5*grain*detail)+(1.-spot)*vec3(.28,.15,.03);}
+ gl_FragColor=vec4(mix(vec3(1.),rgb,filtered),1.);
+#include <colorspace_fragment>
+}`;

@@ -1,3 +1,4 @@
+import {makeSolarTextures,solarFragment} from './solar-surface.js';
 import {BlackHoleExplorer} from './black-hole.js';
 import {BH_MAX_SPEED} from './black-hole-physics.js';
 import {rotateFlight,aimFlight,ascentAt} from './flight-controls.js';
@@ -40,22 +41,21 @@ vec3 albedo=hasMap?texture2D(tex,vUV).rgb:base;albedo=mix(albedo,texture2D(cloud
 }`;
 const dummy=new THREE.DataTexture(new Uint8Array([180,180,180,255]),1,1);dummy.needsUpdate=true;
 const loadTexture=name=>new Promise(resolve=>texLoader.load('assets/'+name+'.jpg',t=>{t.colorSpace=THREE.SRGBColorSpace;t.wrapS=THREE.RepeatWrapping;t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.anisotropy=Math.min(16,renderer.capabilities.getMaxAnisotropy());resolve(t);},undefined,()=>resolve(dummy)));
+const solarTextures=makeSolarTextures();
+texLoader.load('solar-assets/inouye-granulation.jpg',t=>{t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.minFilter=THREE.LinearMipmapLinearFilter;t.anisotropy=Math.min(16,renderer.capabilities.getMaxAnisotropy());solarTextures.granules=t;const material=sun.mesh?.material;if(material)material.uniforms.granules.value=t;});
 const sphere=new THREE.SphereGeometry(1,256,128);
 for(const b of bodies){
  b.pos=new THREE.Vector3();b.previous=new THREE.Vector3();
  const uniforms={heightMap:{value:dummy},hasHeight:{value:false},heightBounds:{value:new THREE.Vector2()},heightStep:{value:new THREE.Vector2(1/4096,1/2048)},radiusKm:{value:b.r},bodyMatrix:{value:new THREE.Matrix3()},tex:{value:dummy},clouds:{value:dummy},night:{value:dummy},hasMap:{value:false},isEarth:{value:b.id==='earth'},gas:{value:!!b.gas},smallBody:{value:['halley','ida','gaspra'].includes(b.id)},base:{value:new THREE.Color(b.color||'#aaaaaa')},detail:{value:0},venusCloud:{value:0},haze:{value:new THREE.Color('#bc8a40')},hazeAmount:{value:0},saturation:{value:b.id==='neptune'?.38:.86},lightDir:{value:new THREE.Vector3(1,0,0)},flux:{value:1},exposure:{value:1}};
- const mat=b.id==='sun'?new THREE.ShaderMaterial({uniforms:{tex:uniforms.tex,filtered:{value:0}},vertexShader:vertex,fragmentShader:`#include <common>
-#include <logdepthbuf_pars_fragment>
-uniform sampler2D tex;uniform float filtered;varying vec2 vUV;varying vec3 vN;varying vec3 vP;varying vec3 vLocal;void main(){
-#include <logdepthbuf_fragment>
-vec3 n=normalize(vLocal);float grey=dot(texture2D(tex,vUV).rgb,vec3(.2126,.7152,.0722));float spot=1.;float limb=pow(max(.01,dot(normalize(vN),normalize(-vP))),.22);vec3 photo=vec3(1.,.965,.9)*(.55+.45*grey)*max(.04,spot)*limb;gl_FragColor=vec4(mix(vec3(1.),photo,filtered),1.);
-#include <colorspace_fragment>
-}`}):new THREE.ShaderMaterial({uniforms,vertexShader:vertex,fragmentShader:fragment});
+ const mat=b.id==='sun'?new THREE.ShaderMaterial({uniforms:{...uniforms,filtered:{value:0},euv:{value:0},euvReady:{value:0},solarTime:{value:0},granules:{value:solarTextures.granules},spots:{value:solarTextures.spots},euvMap:{value:dummy}},vertexShader:vertex,fragmentShader:solarFragment}):new THREE.ShaderMaterial({uniforms,vertexShader:vertex,fragmentShader:fragment});
  const group=new THREE.Group(),mesh=new THREE.Mesh(sphere,mat);mesh.scale.setScalar(b.r/1000);mesh.frustumCulled=false;group.add(mesh);scene.add(group);b.mesh=mesh;b.group=group;b.uniforms=uniforms;group.rotation.z=THREE.MathUtils.degToRad(b.tilt);objects.set(b.id,b);
  const label=document.createElement('button');label.className='body-label';label.innerHTML=`<span>${b.name}</span><small></small>`;label.title='Seleccionar '+b.name;label.onclick=()=>setTarget(b.id);$('labels').append(label);labels.set(b.id,label);
  const option=document.createElement('option');option.value=b.id;option.textContent=(b.parent?'  ↳ ':'')+b.name;$('target').append(option);
 }
 const solarPlasma=new SolarPlasma(sun);
+let solarEUVRequested=false;
+function loadSolarEUV(){if(solarEUVRequested)return;solarEUVRequested=true;texLoader.load('solar-assets/sdo-aia-171-4096.jpg',t=>{t.colorSpace=THREE.SRGBColorSpace;t.minFilter=THREE.LinearMipmapLinearFilter;sun.mesh.material.uniforms.euvMap.value=t;sun.mesh.material.uniforms.euvReady.value=1;},undefined,()=>toast('Mapa EUV no disponible: mostrando reconstrucción ilustrativa.'));}
+
 $('target').value=state.target;
 
 const fleet=missionData.map(m=>({...m,id:'mission-'+m.id,modelId:m.id,kind:'MISIÓN ESPACIAL · RECREACIÓN',r:m.width/2,pos:new THREE.Vector3()}));
@@ -183,7 +183,8 @@ function renderBodies(){if(!state.ready||state.scenario==='blackhole')return;con
  ring.material.uniforms.lightDir.value.copy(sun.pos).sub(saturn.pos).normalize();ring.material.uniforms.brightness.value=Math.min(2,exposure/Math.pow(saturn.pos.distanceTo(sun.pos)/AU,2));
  const near=nearestBody(),alt=ship.distanceTo(near.pos)-near.r,daylight=Math.max(.02,ship.clone().sub(near.pos).normalize().dot(sun.pos.clone().sub(near.pos).normalize())),a=near.atmosphere;
  const atm=a?Math.min(1,Math.exp(-Math.max(0,alt)/a.scale)*a.density)*Math.min(1,daylight*2):0;sky.material.uniforms.amount.value=atm;sky.material.uniforms.tint.value.set(a?.color||'#508fce');sky.material.uniforms.up.value.copy(ship).sub(near.pos).normalize();sky.visible=atm>.001;const vision=viewBrightness(camera,ship,sun,bodies,atm);const elapsed=Math.min(.25,(performance.now()-(scene.userData.eyeTime||performance.now()))/1000);scene.userData.eyeTime=performance.now();state.eye+=(vision.stars-state.eye)*(1-Math.exp(-elapsed/(vision.stars<state.eye?.18:1.8)));starMat.uniforms.opacity.value=state.eye*.95;milkyUniforms.opacity.value=state.eye*.22;scene.userData.starVisibility=state.eye;starMat.uniforms.observer.value.copy(ship).multiplyScalar(1/3.0856775814913673e13);scene.userData.atmosphere={amount:atm,color:a?.color};scene.userData.observerPC=starMat.uniforms.observer.value;
- sun.mesh.material.uniforms.filtered.value=ds*AU<sun.r*15?1:0;scene.userData.solarFiltered=!!sun.mesh.material.uniforms.filtered.value;solarPlasma.update(scene,scene.userData.solarFiltered,state.sim/1000);$('solarFilter').hidden=!scene.userData.solarFiltered;
+ const solarMode=$('solarView').value,close=ds*AU<sun.r*15,euv=solarMode==='euv'||solarMode==='auto'&&ds*AU<sun.r*5;
+ const su=sun.mesh.material.uniforms;su.filtered.value=close||solarMode!=='auto'?1:0;su.euv.value=euv?1:0;su.solarTime.value=(state.sim/1000)%100000;if(euv)loadSolarEUV();scene.userData.solarFiltered=!!su.filtered.value;scene.userData.solarEUV=euv;solarPlasma.update(scene,scene.userData.solarFiltered,state.sim/1000);$('solarFilter').hidden=!scene.userData.solarFiltered;$('solarCredit').hidden=!scene.userData.solarFiltered;$('solarFilter').textContent=euv?'FILTRO EUV · 171 Å · FALSO COLOR':'FILTRO SOLAR · LUZ VISIBLE';
  if(Math.floor(state.sim/DAY/1000)!==influenceDay)refreshOrbits();orbits.update(ship);updateDetail();
  camera.updateMatrixWorld();const rect=canvas.getBoundingClientRect(),w=rect.width,h=rect.height,dir=getForward().clone();
  for(const m of fleet){const angular=m.width/Math.max(.000001,ship.distanceTo(m.pos));if(m.id===state.target||angular>.001)loadMission(m);if(m.model){m.model.position.copy(m.pos).sub(ship).multiplyScalar(.001);m.model.visible=angular>.00001;}}scene.userData.missions=fleet.filter(m=>m.triangles).map(m=>({...m,pos:m.pos.clone().sub(ship).multiplyScalar(.001)}));

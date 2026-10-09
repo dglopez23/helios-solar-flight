@@ -3,3 +3,4 @@ dist/assets/
 .sites-runtime/
 .env*
 data-sources/
+dist/solar-assets/*.jpg

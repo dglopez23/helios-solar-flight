@@ -1,0 +1,3 @@
+import{readFileSync,writeFileSync,existsSync}from'node:fs';import{createHash}from'node:crypto';
+const root=new URL('../dist/solar-assets/',import.meta.url),manifest=JSON.parse(readFileSync(new URL('sources.json',root)));const hash=b=>createHash('sha256').update(b).digest('hex');
+for(const [file,expected]of Object.entries(manifest.files)){const target=new URL(file,root);if(existsSync(target)&&hash(readFileSync(target))===expected)continue;const r=await fetch('https://juegos-dglopez.dglopez.chatgpt.site/helios/solar-assets/'+file,{signal:AbortSignal.timeout(120000)});if(!r.ok)throw Error('No se pudo descargar '+file);const b=Buffer.from(await r.arrayBuffer());if(hash(b)!==expected)throw Error('Recurso solar dañado');writeFileSync(target,b);}

@@ -8,9 +8,11 @@ export function clockText(seconds){const negative=seconds<0?'−':'',s=Math.abs(
 
 export class BlackHoleExplorer{
  constructor({renderer,canvas,camera,ship,state,look,toast,updateUI}){
-  Object.assign(this,{camera,ship,state,look,toast,refresh:updateUI});this.view=new BlackHoleRenderer(renderer,canvas);this.velocity=new THREE.Vector3();this.settings={disk:true,guides:false,exposure:1.8,coordinate:0};this.proper=0;this.reference=0;this.markerTime=0;
+  Object.assign(this,{camera,ship,state,look,toast,refresh:updateUI});this.view=new BlackHoleRenderer(renderer,canvas);this.velocity=new THREE.Vector3();this.settings={disk:true,jets:false,flowRate:30,guides:false,exposure:1.8,coordinate:0};this.proper=0;this.reference=0;this.markerTime=0;
   for(const button of document.querySelectorAll('[data-radius]'))button.onclick=()=>this.visit(+button.dataset.radius);
   $('bhDisk').onchange=e=>this.settings.disk=e.target.checked;
+  $('bhJet').onchange=e=>this.settings.jets=e.target.checked;
+  $('bhFlowRate').onchange=e=>this.settings.flowRate=+e.target.value;
   $('bhGuides').onchange=e=>this.settings.guides=e.target.checked;
   $('bhExposure').oninput=e=>this.settings.exposure=+e.target.value;
   $('bhStar').onchange=()=>{this.markerTime=0;this.markerCache=null;};
@@ -57,6 +59,7 @@ export class BlackHoleExplorer{
   $('speed').textContent=fmt(this.state.speed,this.state.speed<10?2:0);$('hudSpeed').textContent=$('speed').textContent;$('hudTarget').textContent='Agujero negro';$('hudDistance').textContent=fmt(r,3)+' rₛ';$('reference').textContent=this.state.speed===0?'ESTACIONARIO · SCHWARZSCHILD':'VELOCIDAD LOCAL · OBSERVADOR ESTÁTICO';$('cRatio').textContent=fmt(this.state.speed/C*100,4)+' % c';
   $('altBody').textContent='DISTANCIA AL HORIZONTE';$('altitude').innerHTML=fmt((r-1)*RS,0)+' <small>km</small>';$('altNote').textContent='RADIO CENTRAL '+fmt(r,3)+' rₛ';$('phase').textContent=this.state.paused?'SIMULACIÓN EN PAUSA':'AGUJERO NEGRO · EXPLORACIÓN ASISTIDA'+(this.state.warp>1?' · ×'+this.state.warp:'');$('epoch').textContent='SCHWARZSCHILD · 1.000.000 M☉';$('reticleText').textContent=this.state.assist?'RUMBO ASISTIDO':'RUMBO LIBRE';$('assist').querySelector('span').textContent=this.state.assist?'ON':'OFF';$('assist').classList.toggle('active',this.state.assist);
   $('warpNote').textContent='Ritmo ×'+this.state.warp+' del tiempo propio · velocidad local < c';$('navigationNote').textContent='Horizonte: '+fmt(RS,0)+' km de radio. La sonda usa propulsión idealizada.';
+  $('bhShift').textContent=fmt(1/lapse(r),3)+'× frecuencia · '+fmt(656.3*lapse(r),1)+' nm';
   $('bhLocal').textContent=clockText(this.proper);$('bhRemote').textContent=clockText(this.reference);$('bhDifference').textContent=clockText(this.reference-this.proper);$('bhRatio').textContent=fmt(rate.ratio,3)+'×';$('bhPosition').textContent=fmt(r,4)+' rₛ';$('bhAcceleration').textContent=holdingAcceleration(r).toExponential(2)+' m/s²';$('bhTides').textContent=tidalAcceleration(r).toExponential(2)+' m/s²';
   $('externalClock').textContent=clockText(this.externalMode==='comparison'?this.reference:signal.emissionTime);$('externalRate').textContent=fmt(this.externalMode==='comparison'?rate.ratio:signal.frequency,3)+'×';
   $('externalNote').textContent=this.externalMode==='comparison'?'Comparación didáctica de relojes en tiempo coordenado de Schwarzschild. No es una señal instantánea.':'Enlace radial con una red de balizas sincronizadas a 1.000 rₛ. Retraso: '+fmt(signal.delay,1)+' s. El reloj muestra la fecha de emisión; puede preceder al inicio.';

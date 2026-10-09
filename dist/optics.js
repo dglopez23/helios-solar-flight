@@ -16,12 +16,12 @@ export class SolarOptics{
  // Low-contrast extended corona under the automatic neutral-density camera filter.
  const g=ctx.createRadialGradient(x,y,radius,x,y,radius*3.5);g.addColorStop(0,'rgba(245,239,225,.09)');g.addColorStop(.35,'rgba(218,230,242,.018)');g.addColorStop(1,'rgba(218,230,242,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,radius*3.5,0,Math.PI*2);ctx.arc(x,y,radius,0,Math.PI*2,true);ctx.fill();return;
  }
- ctx.globalCompositeOperation='screen';const peak=Math.min(.8,.22+Math.max(0,(-magnitude-12)/20));const g=ctx.createRadialGradient(x,y,0,x,y,halo);g.addColorStop(0,`rgba(255,251,237,${peak})`);g.addColorStop(Math.min(.12,Math.max(.01,radius/halo)),`rgba(255,248,228,${peak*.65})`);g.addColorStop(.3,`rgba(255,240,210,${peak*.13})`);g.addColorStop(1,'rgba(255,244,224,0)');ctx.fillStyle=g;ctx.fillRect(x-halo,y-halo,halo*2,halo*2);
+ ctx.globalCompositeOperation='screen';const peak=Math.min(.8,.22+Math.max(0,(-magnitude-12)/20));const g=ctx.createRadialGradient(x,y,0,x,y,halo);g.addColorStop(0,`rgba(255,251,237,${peak})`);g.addColorStop(Math.min(.12,Math.max(.01,radius/halo)),`rgba(255,248,228,${peak*.65})`);g.addColorStop(.3,`rgba(215,235,255,${peak*.13})`);g.addColorStop(1,'rgba(255,244,224,0)');ctx.fillStyle=g;ctx.fillRect(x-halo,y-halo,halo*2,halo*2);
  // Saturated sensor point spread, distinct from the correctly scaled solar mesh.
  const core=Math.max(1.4,Math.min(6,2.5+(-magnitude-18)*.25),radius);ctx.fillStyle='#fffef9';ctx.beginPath();ctx.arc(x,y,core,0,Math.PI*2);ctx.fill();
  // Camera diffraction and veiling glare, informed by ISS photographs. These
  // streaks belong to the instrument response, not a kilometre-sized corona.
- if(radius<150){for(let ray=0;ray<12;ray++){const angle=ray*Math.PI/6+.14,length=glare*(ray%3===0?1.3:.65)+radius*2;for(let j=0;j<14;j++){const a=Math.max(core,j/14*length),b=Math.max(core,(j+1)/14*length),alpha=peak*.2*Math.pow(1-j/14,3);ctx.strokeStyle=`rgba(255,249,232,${alpha})`;ctx.lineWidth=Math.max(.5,2*(1-j/14));ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*a,y+Math.sin(angle)*a);ctx.lineTo(x+Math.cos(angle)*b,y+Math.sin(angle)*b);ctx.stroke();}}}
+ if(radius<150){for(let ray=0;ray<24;ray++){const angle=ray*Math.PI/12+.14,length=glare*(ray%3===0?1.7:.7)+radius*2;for(let j=0;j<24;j++){const a=Math.max(core,j/24*length),b=Math.max(core,(j+1)/24*length),alpha=peak*.32*Math.pow(1-j/24,3);ctx.strokeStyle=`rgba(235,245,255,${alpha})`;ctx.lineWidth=Math.max(.5,4*Math.pow(1-j/24,2));ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*a,y+Math.sin(angle)*a);ctx.lineTo(x+Math.cos(angle)*b,y+Math.sin(angle)*b);ctx.stroke();}}}
  const inner=ctx.createRadialGradient(x,y,core*.3,x,y,Math.max(core*2.5,9));inner.addColorStop(0,'rgba(255,255,255,.8)');inner.addColorStop(.35,'rgba(255,253,247,.45)');inner.addColorStop(1,'rgba(255,246,221,0)');ctx.fillStyle=inner;ctx.beginPath();ctx.arc(x,y,Math.max(core*2.5,9),0,Math.PI*2);ctx.fill();
  ctx.globalCompositeOperation='source-over';
  }
