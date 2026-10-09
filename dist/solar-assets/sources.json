@@ -1,11 +1,11 @@
 {
-  "description": "NASA SDO/AIA 171 \u00c5, 4096 px, EUV false-color snapshot. One observed hemisphere; far side and fine surface granulation are illustrative reconstructions. Not a live image.",
+  "description": "NASA SDO/AIA 171 \u00c5, 4096 px, EUV false-color snapshot. One observed hemisphere; far side reconstructed. Not a live image.",
   "source": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_4096_0171.jpg",
   "credit": "NASA/SDO and the AIA science team",
   "retrieved": "2026-10-09",
   "files": {
-    "sdo-aia-171-4096.jpg": "510b05c85dca5460908742e11f586a23682332394aa5e72adb38ccc63287776e",
-    "inouye-granulation.jpg": "91dda70ae85a4cf0447123d47af0c8445742e5fd7a961387d1a66bee0657e596"
+    "sdo-aia-171-4096.jpg": "0a71f4e9dbb0235c38c8842e4c0e6e398866b219275c992292c768cd510c9f9c",
+    "inouye-granulation.jpg": "c4d85675b7c9e6e819b037f31ba65ce69265a4768ae26d09eb591422456bafa2"
   },
   "granulation": {
     "source": "https://noirlab.edu/public/media/archives/images/large/NSO-DKIST-firstlight-full.jpg",
@@ -13,5 +13,6 @@
     "credit": "NSO/AURA/NSF",
     "license": "CC BY 4.0",
     "usage": "Observed patch repeated with mirrored wrapping as an illustrative solar surface; not a full-Sun measurement."
-  }
+  },
+  "processing": "Both images encoded as 4096\u00d74096 JPEG for delivery. Granulation sampled as luminance and mirrored across the sphere."
 }

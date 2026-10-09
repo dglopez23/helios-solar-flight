@@ -44,7 +44,6 @@
   ],
   "files": {
     "dist/assets/earth_daymap-hi.jpg": "0f05e95929560e24823af4213e878f05d36eb31e54ac0202b921c7eaa19816d6",
-    "dist/assets/sun-hi.jpg": "f22b1cfb306ddce72a7e3b628668a0175b745038ce6268557cb2f7f1bdf98b9d",
     "dist/assets/callisto.jpg": "da147ed5faede82da9eff1b28dbde9f29bfaaffd98b9ef41fd0787e1303266a5",
     "dist/assets/BufferGeometryUtils.js": "3de832095679e56578beddf70f3e90846a47ec8a886fa8eb21c973cdaef88922",
     "dist/assets/terrain/sources.json": "febf26bee27b9e0a8df57a6a81a2b46c4b26097090b161b811582718fbe101b2",
