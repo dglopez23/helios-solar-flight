@@ -1,4 +1,4 @@
-# HELIOS · Explorador solar
+# HELIOS · Exploración solar y relativista
 
 [Jugar en DGLopez Play Lab](https://juegos-dglopez.dglopez.chatgpt.site/helios/)
 
@@ -11,6 +11,24 @@ npm run dev
 
 `npm run build` prepara los recursos en `dist/assets/`. La aplicación completa se sirve desde `dist/`, sin servidor de datos ni peticiones externas durante el juego. Los recursos se verifican con SHA-256. Si los paquetes ZIP aún no están en la copia del repositorio, el preparador descarga los mapas, modelos y datos originales de la edición pública de DGLopez. La primera preparación necesita conexión y aproximadamente 171 MB; las siguientes reutilizan los recursos locales verificados. Node.js 18 o posterior. `npm test` comprueba las físicas y los datos.
 
+## Dos exploraciones, una nave
+
+La pantalla inicial permite elegir **Sistema solar** o **Agujero negro** antes del despegue. En Sistemas → Cambiar exploración puedes volver a elegir. Ambos escenarios comparten catálogo HYG, fondo de la Vía Láctea NASA/Gaia y controles locales de la nave. El escenario solar conserva sus efemérides, radios, despegue y comportamiento previo.
+
+El nuevo escenario contiene un agujero negro idealizado de Schwarzschild de un millón de masas solares (rₛ = 2.953.339,382 km). Navegación asistida, velocidad local hasta 0,995 c y exclusión barrida en 1,01 rₛ. No se simula caída libre ni rotación Kerr. La propulsión sostiene la sonda; se muestran la aceleración de sustentación y las mareas sobre dos metros.
+
+**N** abre la navegación relativista: accesos de 20 a 1,01 rₛ, disco opcional, ayudas geométricas, selección/alineación de estrella, mirada hacia el exterior y reinicio de relojes. Los accesos son saltos didácticos y conservan los relojes. **V** conserva el mando de velocidad y el selector de ritmo temporal; el ritmo del escenario relativista multiplica el tiempo propio. G apunta al centro, O alterna ayudas, Tab oculta la interfaz y P pausa.
+
+La óptica integra geodésicas nulas con Runge–Kutta de cuarto orden, u″ = −u + 3u²/2, en el plano de cada rayo. Incluye sombra, lentes, imágenes múltiples, disco directo y curvado, aberración y factores de frecuencia gravitatorios/Doppler. El shader usa renderizado a resolución adaptable; existe un trazador CPU de menor resolución con la misma ecuación. El límite de 640 pasos de 0,025 radianes y la resolución de la textura celeste restringen las imágenes de orden alto. Las etiquetas de una estrella se calculan invirtiendo la misma función de transferencia de geodésicas y se muestran con la sonda estacionaria.
+
+El disco opaco entre 3 y 22 rₛ tiene velocidades circulares relativistas; su emisión térmica, estructura y tasa de brillo son ilustrativas. El color espectral de las estrellas y la exposición son aproximados. El modelo es exploratorio: no representa una observación o predicción completa de transferencia radiativa.
+
+Los relojes acumulan tiempos propios usando la posición y velocidad durante el recorrido. La referencia estacionaria está a 1.000 rₛ, con su factor finito incluido. La ventana exterior distingue la comparación en simultaneidad de Schwarzschild de una señal recibida desde una red ideal de balizas sincronizadas sobre esa esfera: retraso radial exacto mediante la coordenada tortuga y Doppler del receptor. No es una transmisión instantánea de la Tierra ni una estación puntual con múltiples caminos de luz. El reloj de emisión puede preceder al inicio de la exploración.
+
+`npm test` ejecuta las verificaciones solares y las nuevas comprobaciones de relojes, trayectoria, exclusión del horizonte, retraso de señal, Doppler, aberración, cono analítico de sombra, límite de deflexión débil e imágenes de una misma estrella. La nueva integración se verificó con el DOM y el trazador CPU: selección, entrada, accesos, ventana, reinicio de relojes, alineación estelar, despegue solar y vuelta al agujero negro. El shader se compiló y renderizó por separado en Mesa/OpenGL; en esta sesión no fue posible probar la interfaz en un navegador conectado al servidor local, por lo que ese recorrido WebGL queda pendiente.
+
+Referencias: [Einstein Online](https://www.einstein-online.info/en/blackHoles/), [Eric Bruneton, renderizado de agujeros negros](https://ebruneton.github.io/black_hole_shader/). La integración de geodésicas es una implementación propia.
+
 ## Datos y límites
 
 
@@ -18,7 +36,7 @@ Solar exploration game. Browser-only application with Three.js WebGL rendering a
 
 The scene uses kilometres in double precision, subtracts the observer before GPU upload, and renders at 1000 km per scene unit. Planet radii are volumetric mean radii: reference spheres plus integrated measured terrain, not detailed ellipsoids. JPL Horizons geometric barycentric positions and velocities are interpolated by cubic Hermite between hourly samples. The epoch window is 2026-10-04 to 2026-11-05 TDB. Displayed UTC is approximated as TDB minus 69.184 seconds. Raw retrievals are retained in data-sources.
 
-Physical limitations: no spacecraft gravitational dynamics, special relativistic optics, photon light-time, eclipsing illumination, exact IAU pole/prime-meridian orientation, or physically realizable propulsion. Rotational periods and approximate obliquities are included. The Sun has a physically scaled photosphere plus a photometric optical glare overlay even below one pixel. A camera filter engages inside 15 solar radii; the surface texture and new magnetic plasma loops are illustrative, not live observations. Illumination includes inverse-square flux and automatic exposure. Stars use HYG 4.1 positions, magnitudes and B−V, geometric observer parallax, and the NASA SVS / Gaia DR2 faint-star Milky Way background. The interface explains these limitations.
+Physical limitations of the Solar System scenario: no spacecraft gravitational dynamics, special relativistic optics, photon light-time, eclipsing illumination, exact IAU pole/prime-meridian orientation, or physically realizable propulsion. Rotational periods and approximate obliquities are included. The Sun has a physically scaled photosphere plus a photometric optical glare overlay even below one pixel. A camera filter engages inside 15 solar radii; the surface texture and new magnetic plasma loops are illustrative, not live observations. Illumination includes inverse-square flux and automatic exposure. Stars use HYG 4.1 positions, magnitudes and B−V, geometric observer parallax, and the NASA SVS / Gaia DR2 faint-star Milky Way background. The interface explains these limitations.
 
 Sources:
 - NASA/JPL Horizons: https://ssd.jpl.nasa.gov/horizons/ and https://ssd-api.jpl.nasa.gov/doc/horizons.html

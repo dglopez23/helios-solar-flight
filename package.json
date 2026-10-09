@@ -9,7 +9,7 @@
     "dev": "vite dist --host 0.0.0.0",
     "build": "npm run prepare:assets",
     "pretest": "npm run prepare:assets",
-    "test": "node verify.mjs"
+    "test": "node verify.mjs && node verify-black-hole.mjs"
   },
   "devDependencies": {
     "vite": "6.1.0"
